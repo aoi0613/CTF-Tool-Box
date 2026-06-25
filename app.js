@@ -128,3 +128,30 @@ function copyResult(targetId) {
         alert('コピーに失敗しました。');
     });
 }
+
+// --- 追加：キーボード入力イベントの設定 ---
+// 画面が読み込まれた後にイベントを設定する
+window.onload = function() {
+    const inputTextEl = document.getElementById('inputText');
+    const caesarShiftEl = document.getElementById('caesarShift');
+    const vigenereKeyEl = document.getElementById('vigenereKey');
+
+    // 1. メイン入力欄（textarea）のイベント
+    inputTextEl.addEventListener('keydown', function(e) {
+        // Enterキーが押され、かつShiftキーが押されていない場合
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // デフォルトの挙動（改行）を防ぐ
+            decodeAll();        // 解読処理を一括実行
+        }
+    });
+
+    // 2. パラメータ入力欄（input）のイベント（Shiftの考慮は不要）
+    const triggerOnEnter = function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            decodeAll();
+        }
+    };
+    caesarShiftEl.addEventListener('keydown', triggerOnEnter);
+    vigenereKeyEl.addEventListener('keydown', triggerOnEnter);
+};
