@@ -1,7 +1,81 @@
-<!doctype html>
-<meta charset=
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一括暗号解読ツール (RSA対応)</title>
+    <script src="https://unpkg.com/node-forge@1.3.1/dist/forge.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+        .input-group { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
+        textarea { width: 100%; height: 80px; margin-bottom: 10px; font-family: monospace; }
+        .key-area { height: 120px; } /* 秘密鍵用に少し高さを確保 */
+        input[type="text"], input[type="number"] { padding: 5px; margin-right: 15px; }
+        button { padding: 8px 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        .result-box { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
+        .result-box h3 { margin-top: 0; font-size: 1.1em; display: flex; justify-content: space-between; }
+        .result-box textarea { height: 50px; background: #fafafa; }
+        .copy-btn { padding: 4px 10px; font-size: 0.9em; background: #28a745; }
+        .copy-btn:hover { background: #1e7e34; }
+        .error-text { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>一括暗号解読ツール (RSA対応)</h2>
+    
+    <div class="input-group">
+        <label><b>暗号化された文字列（必須）:</b></label>
+        <textarea id="inputText" placeholder="ここに文字列を入力（RSAの場合はBase64形式を想定）"></textarea>
+        
+        <div style="margin-bottom: 10px;">
+            <label>シーザー暗号のずらす数:</label>
+            <input type="number" id="caesarShift" value="3" style="width: 60px;">
+            
+            <label>Vigenère暗号の鍵（英字）:</label>
+            <input type="text" id="vigenereKey" value="KEY" placeholder="例: KEY">
+        </div>
 
-"utf-8">
-<title>自己紹介</title>
-<h1>自己紹介</h1>
-<p>授業で作成したページです。</p>
+        <div>
+            <label><b>RSA秘密鍵（RSA復号時のみ必須）:</b></label>
+            <textarea id="rsaPrivateKey" class="key-area" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"></textarea>
+        </div>
+        
+        <button onclick="decodeAll()">すべての方式で解読する</button>
+        <div id="globalError" class="error-text"></div>
+    </div>
+
+    <div id="results">
+        <div class="result-box">
+            <h3>Base64 <button class="copy-btn" onclick="copyResult('out-base64')">コピー</button></h3>
+            <textarea id="out-base64" readonly></textarea>
+        </div>
+        <div class="result-box">
+            <h3>URLエンコード <button class="copy-btn" onclick="copyResult('out-url')">コピー</button></h3>
+            <textarea id="out-url" readonly></textarea>
+        </div>
+        <div class="result-box">
+            <h3>ROT13 <button class="copy-btn" onclick="copyResult('out-rot13')">コピー</button></h3>
+            <textarea id="out-rot13" readonly></textarea>
+        </div>
+        <div class="result-box">
+            <h3>シーザー暗号 <button class="copy-btn" onclick="copyResult('out-caesar')">コピー</button></h3>
+            <textarea id="out-caesar" readonly></textarea>
+        </div>
+        <div class="result-box">
+            <h3>Vigenère暗号 <button class="copy-btn" onclick="copyResult('out-vigenere')">コピー</button></h3>
+            <textarea id="out-vigenere" readonly></textarea>
+        </div>
+        <div class="result-box">
+            <h3>モールス符号 <button class="copy-btn" onclick="copyResult('out-morse')">コピー</button></h3>
+            <textarea id="out-morse" readonly></textarea>
+        </div>
+        <div class="result-box">
+            <h3>RSA暗号 <button class="copy-btn" onclick="copyResult('out-rsa')">コピー</button></h3>
+            <textarea id="out-rsa" readonly></textarea>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
