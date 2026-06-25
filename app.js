@@ -8,8 +8,15 @@ function decodeAll() {
 
     globalError.textContent = '';
 
+    // 1. 空白チェック
     if (!inputText) {
         globalError.textContent = 'エラー: 文字列を入力してください。';
+        return;
+    }
+
+    // 2. 文字数上限のチェック
+    if (inputText.length > 10000) {
+        globalError.textContent = `エラー: 入力文字数が上限（10,000文字）を超えています。（現在: ${inputText.length}文字）`;
         return;
     }
 
@@ -21,7 +28,7 @@ function decodeAll() {
     runDecoder('out-vigenere', () => decodeVigenere(inputText, vigenereKey));
     runDecoder('out-morse', () => decodeMorse(inputText));
     
-    // 追加：RSA復号の実行
+    // RSA復号の実行
     runDecoder('out-rsa', () => decodeRSA(inputText, rsaPrivateKey));
 }
 
