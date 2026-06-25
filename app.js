@@ -89,10 +89,19 @@ function decodeVigenere(str, key) {
     });
 }
 
+// モールス符号の解読（全角の「・」「ー」や全角スペースに対応）
 function decodeMorse(str) {
-    if (!/^[.\-\s]+$/.test(str)) {
-        throw new Error("モールス符号の形式ではありません");
+    // 1. ユーザー入力の表記揺れをクレンジング（正規化）
+    let normalized = str
+        .replace(/・/g, '.')         // 全角の中黒をドットに変換
+        .replace(/[ー〜−―-]/g, '-') // 様々な種類の長音記号・ハイフンをダッシュに変換
+        .replace(/ /g, ' ');        // 全角スペースを半角スペースに変換
+
+    // 2. ユーザ入力の検証：モールス符号（. - 空白）以外の文字が含まれている場合はエラー
+    if (!/^[.\-\s]+$/.test(normalized)) {
+        throw new Error("モールス符号の形式（・、ー、空白など）ではありません");
     }
+
     const morseMap = {
         '.-':'A', '-...':'B', '-.-.':'C', '-..':'D', '.':'E', '..-.':'F',
         '--.':'G', '....':'H', '..':'I', '.---':'J', '-.-':'K', '.-..':'L',
@@ -102,7 +111,9 @@ function decodeMorse(str) {
         '....-':'4', '.....':'5', '-....':'6', '--...':'7', '---..':'8',
         '----.':'9', '-----':'0'
     };
-    return str.trim().split(/\s+/).map(code => morseMap[code] || '?').join('');
+    
+    // 3. スペースで区切って各文字をデコード
+    return normalized.trim().split(/\s+/).map(code => morseMap[code] || '?').join('');
 }
 
 function copyResult(targetId) {
