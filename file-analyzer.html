@@ -37,6 +37,24 @@
             border-color: #0056b3;
             color: #0056b3;
         }
+
+        /* 追加：シグネチャ判定用のアラートバッジ */
+        .alert-badge {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        .badge-success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .badge-warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; animation: blink 2s infinite; }
+        .badge-info { background-color: #e2e3e5; border: 1px solid #d6d8db; color: #383d41; }
+
+        @keyframes blink {
+            0% { border-color: #ffeeba; }
+            50% { border-color: #ffc107; box-shadow: 0 0 5px rgba(255,193,7,0.5); }
+            100% { border-color: #ffeeba; }
+        }
     </style>
 </head>
 <body>
@@ -61,6 +79,9 @@
 
     <div class="result-box" id="resultBox" style="display: none;">
         <h3>解析結果 (メタデータ)</h3>
+        
+        <div id="signatureAlert"></div>
+
         <ul id="metadataList"></ul>
     </div>
 

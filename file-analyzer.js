@@ -1,13 +1,75 @@
+// --- マジックナンバー（ファイルシグネチャ）の定義リスト ---
+const MAGIC_NUMBERS = [
+    { hex: '89504e470d0a1a0a', mime: 'image/png', ext: ['png'], name: 'PNG画像' },
+    { hex: 'ffd8ff', mime: 'image/jpeg', ext: ['jpg', 'jpeg'], name: 'JPEG画像' },
+    { hex: '474946383761', mime: 'image/gif', ext: ['gif'], name: 'GIF画像 (GIF87a)' },
+    { hex: '474946383961', mime: 'image/gif', ext: ['gif'], name: 'GIF画像 (GIF89a)' },
+    { hex: '25504446', mime: 'application/pdf', ext: ['pdf'], name: 'PDFドキュメント' },
+    { hex: '504b0304', mime: 'application/zip', ext: ['zip', 'docx', 'xlsx', 'pptx', 'jar', 'apk'], name: 'ZIPアーカイブ / Office文書' },
+    { hex: '4d5a', mime: 'application/x-msdownload', ext: ['exe', 'dll', 'sys'], name: 'Windows実行ファイル/ライブラリ (MZ)' },
+    { hex: '7f454c46', mime: 'application/x-elf', ext: ['elf', 'o', 'so', 'bin'], name: 'Linux ELF実行ファイル' },
+    { hex: '377abcaf271c', mime: 'application/x-7z-compressed', ext: ['7z'], name: '7-Zipアーカイブ' },
+    { hex: '526172211a07', mime: 'application/vnd.rar', ext: ['rar'], name: 'RARアーカイブ' },
+    { hex: '424d', mime: 'image/bmp', ext: ['bmp'], name: 'BMP画像' },
+    { hex: '494433', mime: 'audio/mpeg', ext: ['mp3'], name: 'MP3音声 (ID3v2)' },
+    { hex: '1f8b', mime: 'application/gzip', ext: ['gz', 'tar.gz'], name: 'GZIP圧縮ファイル' }
+];
+
+// --- 補助関数: ファイルの先頭バイトからシグネチャを判定 ---
+async function detectFileType(file) {
+    try {
+        // 先頭16バイトをスライスして読み込む
+        const buffer = await file.slice(0, 16).arrayBuffer();
+        const uint8 = new Uint8Array(buffer);
+        
+        // 16進数の文字列に変換
+        let hexString = '';
+        for (let i = 0; i < uint8.length; i++) {
+            hexString += uint8[i].toString(16).padStart(2, '0');
+        }
+
+        // マジックナンバーリストと前方一致で照合
+        for (const type of MAGIC_NUMBERS) {
+            if (hexString.startsWith(type.hex)) {
+                // 画面表示用に「FF D8 FF」のようにスペース区切りの美しいHEXにする
+                const formattedHex = type.hex.toUpperCase().match(/.{1,2}/g).join(' ');
+                return {
+                    name: type.name,
+                    mime: type.mime,
+                    exts: type.ext,
+                    hex: formattedHex,
+                    matched: true
+                };
+            }
+        }
+
+        // マッチしなかった場合は先頭8バイト分をそのまま表示用として返す
+        const rawHex = hexString.substring(0, 16).toUpperCase().match(/.{1,2}/g).join(' ');
+        return {
+            name: '未知の形式 / 解析不能',
+            mime: 'unknown',
+            exts: [],
+            hex: rawHex,
+            matched: false
+        };
+
+    } catch (e) {
+        console.error('シグネチャ読み込みエラー:', e);
+        return { name: '読み込みエラー', mime: 'unknown', exts: [], hex: '-', matched: false };
+    }
+}
+
 // --- 共通のファイル解析処理 ---
-// ※awaitを使用するため、関数にasyncを追加しています
 async function processFile(file) {
     const errorMessage = document.getElementById('errorMessage');
     const resultBox = document.getElementById('resultBox');
     const metadataList = document.getElementById('metadataList');
+    const signatureAlert = document.getElementById('signatureAlert');
 
     // 表示の初期化
     errorMessage.textContent = '';
     metadataList.innerHTML = '';
+    signatureAlert.innerHTML = '';
     resultBox.style.display = 'none';
 
     if (!file) {
@@ -16,10 +78,27 @@ async function processFile(file) {
     }
 
     try {
+        // 0. マジックナンバーによる真のファイル形式特定
+        const detected = await detectFileType(file);
+        const fileExt = file.name.split('.').pop().toLowerCase(); // 実際のファイルの拡張子
+
+        // 偽装チェックとアラートバッジの生成
+        if (detected.matched) {
+            if (detected.exts.includes(fileExt)) {
+                signatureAlert.innerHTML = `<div class="alert-badge badge-success">✓ ファイル検証: 正常（拡張子と内部シグネチャが一致しています: ${detected.name}）</div>`;
+            } else {
+                signatureAlert.innerHTML = `<div class="alert-badge badge-warning">⚠️ 【警告】ファイル形式の偽装を検知しました！<br>拡張子は「.${fileExt}」ですが、バイナリシグネチャは「${detected.name}」を示しています。</div>`;
+            }
+        } else {
+            signatureAlert.innerHTML = `<div class="alert-badge badge-info">ℹ シグネチャ解析: 未知のファイル形式です（拡張子 .${fileExt} として通常のメタデータ展開を試みます）</div>`;
+        }
+
         // 1. 標準のFile APIを使用して基本メタデータを抽出
         const metadata = {
             'ファイル名': file.name,
-            'ファイルの種類 (MIMEタイプ)': file.type || '不明 (拡張子から判別できない形式です)',
+            'OS判定の形式 (MIME)': file.type || '不明',
+            'シグネチャ判定の形式': `<strong>${detected.name}</strong>`,
+            'マジックナンバー (HEX)': `<code style="background:#efefef; padding:2px 4px; border-radius:4px;">${detected.hex}</code>`,
             'ファイルサイズ': formatBytes(file.size),
             '最終更新日時': new Date(file.lastModified).toLocaleString('ja-JP')
         };
@@ -31,13 +110,14 @@ async function processFile(file) {
             metadataList.appendChild(li);
         }
 
-        // 基本メタデータの表示を確定
+        // 結果エリアを表示
         resultBox.style.display = 'block';
 
         // ==========================================
-        // 2. JPEGファイルの場合：EXIF情報の解析
+        // 2. JPEGファイルの解析
+        // 拡張子がjpg/jpeg、または「中身が真のJPEG」だった場合に実行
         // ==========================================
-        if (file.type === 'image/jpeg' || file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) {
+        if (detected.mime === 'image/jpeg' || fileExt === 'jpg' || fileExt === 'jpeg') {
             EXIF.getData(file, function() {
                 const allMetaData = EXIF.getAllTags(this);
                 if (allMetaData && Object.keys(allMetaData).length > 0) {
@@ -46,15 +126,9 @@ async function processFile(file) {
                     metadataList.appendChild(headerLi);
 
                     const exifFields = {
-                        'Make': 'カメラ製造元',
-                        'Model': 'カメラ機種名',
-                        'DateTimeOriginal': '写真撮影日時',
-                        'ExposureTime': 'シャッタースピード (秒)',
-                        'FNumber': 'F値 (絞り値)',
-                        'ISOSpeedRatings': 'ISO感度',
-                        'FocalLength': '焦点距離 (mm)',
-                        'GPSLatitude': 'GPS 緯度',
-                        'GPSLongitude': 'GPS 経度'
+                        'Make': 'カメラ製造元', 'Model': 'カメラ機種名', 'DateTimeOriginal': '写真撮影日時',
+                        'ExposureTime': 'シャッタースピード (秒)', 'FNumber': 'F値 (絞り値)', 'ISOSpeedRatings': 'ISO感度',
+                        'FocalLength': '焦点距離 (mm)', 'GPSLatitude': 'GPS 緯度', 'GPSLongitude': 'GPS 経度'
                     };
 
                     let hasExifDisplay = false;
@@ -73,7 +147,6 @@ async function processFile(file) {
                                     if (allMetaData[refTag]) value += ` (${allMetaData[refTag]})`;
                                 }
                             }
-
                             if (typeof value === 'object' && value.numerator !== undefined && value.denominator !== undefined) {
                                 value = value.denominator === 1 ? value.numerator : `${value.numerator}/${value.denominator}`;
                             }
@@ -83,7 +156,6 @@ async function processFile(file) {
                             metadataList.appendChild(li);
                         }
                     }
-
                     if (!hasExifDisplay) {
                         const li = document.createElement('li');
                         li.style.color = '#777';
@@ -95,13 +167,12 @@ async function processFile(file) {
         }
 
         // ==========================================
-        // 3. PDFファイルの場合：PDFメタデータの解析
+        // 3. PDFファイルの解析
+        // 拡張子がpdf、または「中身が真のPDF」だった場合に実行
         // ==========================================
-        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        if (detected.mime === 'application/pdf' || fileExt === 'pdf') {
             try {
-                // ファイルをバイナリとして読み込む
                 const arrayBuffer = await file.arrayBuffer();
-                // ignoreEncryption: 暗号化（パスワード保護）されていてもメタデータだけは強引に読みにいく設定
                 const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
 
                 const pdfMetaData = {
@@ -116,7 +187,7 @@ async function processFile(file) {
                 };
 
                 const headerLi = document.createElement('li');
-                headerLi.innerHTML = `<h4 style="margin: 15px 0 5px 0; color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 3px;">PDFメタデータ</h4>`;
+                headerLi.innerHTML = `<h4 style="margin: 15px 0 5px 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 3px;">PDFメタデータ</h4>`;
                 metadataList.appendChild(headerLi);
 
                 let hasPdfDisplay = false;
@@ -128,7 +199,6 @@ async function processFile(file) {
                         metadataList.appendChild(li);
                     }
                 }
-
                 if (!hasPdfDisplay) {
                     const li = document.createElement('li');
                     li.style.color = '#777';
@@ -138,10 +208,13 @@ async function processFile(file) {
 
             } catch (pdfError) {
                 console.error('PDF解析エラー:', pdfError);
-                const li = document.createElement('li');
-                li.style.color = 'red';
-                li.textContent = 'PDFの解析に失敗しました。ファイルが破損しているか、特殊な保護がかけられている可能性があります。';
-                metadataList.appendChild(li);
+                // 拡張子詐欺で中身がPDFではない場合は、ここでエラーを出さずに静かにスルーさせる
+                if (detected.mime === 'application/pdf') {
+                    const li = document.createElement('li');
+                    li.style.color = 'red';
+                    li.textContent = 'PDFシグネチャを検知しましたが、構造の解析に失敗しました。';
+                    metadataList.appendChild(li);
+                }
             }
         }
 
