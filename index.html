@@ -19,14 +19,25 @@
         .copy-btn { padding: 4px 10px; font-size: 0.9em; background: #28a745; }
         .copy-btn:hover { background: #1e7e34; }
         .error-text { color: red; font-weight: bold; }
+
+        /* 追加：ナビゲーションのスタイル */
+        .nav-menu { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav-menu a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
+        .nav-menu a:hover { text-decoration: underline; }
+        .nav-menu span { color: #aaa; margin-right: 15px; } /* 現在のページ用 */
     </style>
 </head>
 <body>
+    <nav class="nav-menu">
+        <span>▶ 暗号解読</span>
+        <a href="file-analyzer.html">ファイル解析ツールへ</a>
+    </nav>
+
     <h2>一括暗号解読ツール (RSA対応)</h2>
     
     <div class="input-group">
         <label><b>暗号化された文字列（必須）:</b></label>
-<textarea id="inputText" maxlength="10000" placeholder="ここに文字列を入力（RSAの場合はBase64形式を想定）"></textarea>
+        <textarea id="inputText" maxlength="10000" placeholder="ここに文字列を入力（RSAの場合はBase64形式を想定）"></textarea>
         
         <div style="margin-bottom: 10px;">
             <label>シーザー暗号のずらす数:</label>
