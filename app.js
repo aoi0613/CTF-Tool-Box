@@ -15,7 +15,7 @@ function decodeAll() {
     }
 
     // 2. 文字数上限のチェック
-    if (inputText.length > 10000) {
+    if (inputText.length > 10) {
         globalError.textContent = `エラー: 入力文字数が上限（10,000文字）を超えています。（現在: ${inputText.length}文字）`;
         return;
     }
