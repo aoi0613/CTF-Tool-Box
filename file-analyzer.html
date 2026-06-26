@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ファイル解析ツール</title>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
         .input-group { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
@@ -31,7 +32,6 @@
             margin-top: 10px;
             margin-bottom: 10px;
         }
-        /* ファイルがエリア上にドラッグされた時のスタイル */
         .drop-zone.dragover {
             background-color: #e9f5ff;
             border-color: #0056b3;
