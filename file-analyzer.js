@@ -1,3 +1,6 @@
+// グローバル変数：検索フィルター用に現在抽出された全文字列を保持
+let currentStrings = [];
+
 // --- マジックナンバー（ファイルシグネチャ）の定義リスト ---
 const MAGIC_NUMBERS = [
     { hex: '89504e470d0a1a0a', mime: 'image/png', ext: ['png'], name: 'PNG画像' },
@@ -18,46 +21,124 @@ const MAGIC_NUMBERS = [
 // --- 補助関数: ファイルの先頭バイトからシグネチャを判定 ---
 async function detectFileType(file) {
     try {
-        // 先頭16バイトをスライスして読み込む
         const buffer = await file.slice(0, 16).arrayBuffer();
         const uint8 = new Uint8Array(buffer);
         
-        // 16進数の文字列に変換
         let hexString = '';
         for (let i = 0; i < uint8.length; i++) {
             hexString += uint8[i].toString(16).padStart(2, '0');
         }
 
-        // マジックナンバーリストと前方一致で照合
         for (const type of MAGIC_NUMBERS) {
             if (hexString.startsWith(type.hex)) {
-                // 画面表示用に「FF D8 FF」のようにスペース区切りの美しいHEXにする
                 const formattedHex = type.hex.toUpperCase().match(/.{1,2}/g).join(' ');
-                return {
-                    name: type.name,
-                    mime: type.mime,
-                    exts: type.ext,
-                    hex: formattedHex,
-                    matched: true
-                };
+                return { name: type.name, mime: type.mime, exts: type.ext, hex: formattedHex, matched: true };
             }
         }
 
-        // マッチしなかった場合は先頭8バイト分をそのまま表示用として返す
         const rawHex = hexString.substring(0, 16).toUpperCase().match(/.{1,2}/g).join(' ');
-        return {
-            name: '未知の形式 / 解析不能',
-            mime: 'unknown',
-            exts: [],
-            hex: rawHex,
-            matched: false
-        };
-
+        return { name: '未知の形式 / 解析不能', mime: 'unknown', exts: [], hex: rawHex, matched: false };
     } catch (e) {
         console.error('シグネチャ読み込みエラー:', e);
         return { name: '読み込みエラー', mime: 'unknown', exts: [], hex: '-', matched: false };
     }
 }
+
+// --- 追加：バイナリから文字列（Strings）を抽出する処理 ---
+async function runStringsExtraction(file) {
+    const stringsTextArea = document.getElementById('stringsTextArea');
+    const stringsCount = document.getElementById('stringsCount');
+    const stringsInputGroup = document.getElementById('stringsInputGroup');
+    const stringsNotice = document.getElementById('stringsNotice');
+    
+    // 初期化
+    stringsTextArea.value = '解析中...';
+    stringsInputGroup.style.display = 'none';
+    stringsNotice.textContent = '';
+    currentStrings = [];
+
+    try {
+        let uint8;
+        const MAX_FULL_SCAN = 4 * 1024 * 1024; // 4MB以下なら全走査
+
+        if (file.size <= MAX_FULL_SCAN) {
+            const buffer = await file.arrayBuffer();
+            uint8 = new Uint8Array(buffer);
+        } else {
+            // 巨大ファイル対策：フリーズを避けるため、先頭2MBと末尾2MBのみを抽出して結合
+            const partSize = 2 * 1024 * 1024; // 2MB
+            const headBlob = file.slice(0, partSize);
+            const tailBlob = file.slice(file.size - partSize, file.size);
+            
+            const headBuf = await headBlob.arrayBuffer();
+            const tailBuf = await tailBlob.arrayBuffer();
+            
+            uint8 = new Uint8Array(headBuf.byteLength + tailBuf.byteLength);
+            uint8.set(new Uint8Array(headBuf), 0);
+            uint8.set(new Uint8Array(tailBuf), headBuf.byteLength);
+            
+            stringsNotice.textContent = `※ファイルサイズが大きいため、先頭2MBと末尾2MBのみを高速スキャンしました。`;
+        }
+
+        // 文字列抽出アルゴリズム (連続する印刷可能ASCII文字 0x20〜0x7E が4文字以上)
+        let start = -1;
+        const minLength = 4;
+        const maxCount = 15000; // 画面表示の最大上限件数
+        const decoder = new TextDecoder('ascii');
+
+        for (let i = 0; i < uint8.length; i++) {
+            const c = uint8[i];
+            if (c >= 0x20 && c <= 0x7e) {
+                if (start === -1) start = i;
+            } else {
+                if (start !== -1) {
+                    if (i - start >= minLength) {
+                        const str = decoder.decode(uint8.subarray(start, i));
+                        currentStrings.push(str);
+                        if (currentStrings.length >= maxCount) {
+                            stringsNotice.textContent += ` (抽出数が上限の ${maxCount} 件に達したため解析を打ち切りました)`;
+                            break;
+                        }
+                    }
+                    start = -1;
+                }
+            }
+        }
+        // ファイルのジャスト末尾に文字列があった場合の処理
+        if (start !== -1 && uint8.length - start >= minLength && currentStrings.length < maxCount) {
+            const str = decoder.decode(uint8.subarray(start, uint8.length));
+            currentStrings.push(str);
+        }
+
+        // 結果の描画
+        stringsInputGroup.style.display = 'block';
+        renderStrings();
+
+    } catch (e) {
+        console.error('Strings抽出エラー:', e);
+        stringsTextArea.value = '文字列の抽出中にエラーが発生しました。';
+    }
+}
+
+// --- 追加：Stringsの描画およびフィルタリング処理 ---
+function renderStrings() {
+    const filterText = document.getElementById('stringsSearch').value.toLowerCase();
+    const stringsTextArea = document.getElementById('stringsTextArea');
+    const stringsCount = document.getElementById('stringsCount');
+    
+    // キーワードが含まれる文字列のみを抽出 (大文字小文字を区別しない)
+    const filtered = currentStrings.filter(str => str.toLowerCase().includes(filterText));
+    
+    if (filtered.length > 0) {
+        stringsTextArea.value = filtered.join('\n');
+    } else {
+        stringsTextArea.value = filterText ? '一致する文字列が見つかりません。' : '人間が読めるASCII文字列は見つかりませんでした。';
+    }
+    
+    // 「ヒット数 / 全体数」を表示
+    stringsCount.textContent = `${filtered.length} / ${currentStrings.length}`;
+}
+
 
 // --- 共通のファイル解析処理 ---
 async function processFile(file) {
@@ -70,6 +151,7 @@ async function processFile(file) {
     errorMessage.textContent = '';
     metadataList.innerHTML = '';
     signatureAlert.innerHTML = '';
+    document.getElementById('stringsSearch').value = ''; // 検索ボックスのリセット
     resultBox.style.display = 'none';
 
     if (!file) {
@@ -103,7 +185,6 @@ async function processFile(file) {
             '最終更新日時': new Date(file.lastModified).toLocaleString('ja-JP')
         };
 
-        // 基本結果をHTMLのリスト要素として表示
         for (const [key, value] of Object.entries(metadata)) {
             const li = document.createElement('li');
             li.innerHTML = `<strong>${key}:</strong> ${value}`;
@@ -115,7 +196,6 @@ async function processFile(file) {
 
         // ==========================================
         // 2. JPEGファイルの解析
-        // 拡張子がjpg/jpeg、または「中身が真のJPEG」だった場合に実行
         // ==========================================
         if (detected.mime === 'image/jpeg' || fileExt === 'jpg' || fileExt === 'jpeg') {
             EXIF.getData(file, function() {
@@ -168,7 +248,6 @@ async function processFile(file) {
 
         // ==========================================
         // 3. PDFファイルの解析
-        // 拡張子がpdf、または「中身が真のPDF」だった場合に実行
         // ==========================================
         if (detected.mime === 'application/pdf' || fileExt === 'pdf') {
             try {
@@ -187,7 +266,7 @@ async function processFile(file) {
                 };
 
                 const headerLi = document.createElement('li');
-                headerLi.innerHTML = `<h4 style="margin: 15px 0 5px 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 3px;">PDFメタデータ</h4>`;
+                headerLi.innerHTML = `<h4 style="margin: 15px 0 5px 0; color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 3px;">PDFメタデータ</h4>`;
                 metadataList.appendChild(headerLi);
 
                 let hasPdfDisplay = false;
@@ -208,7 +287,6 @@ async function processFile(file) {
 
             } catch (pdfError) {
                 console.error('PDF解析エラー:', pdfError);
-                // 拡張子詐欺で中身がPDFではない場合は、ここでエラーを出さずに静かにスルーさせる
                 if (detected.mime === 'application/pdf') {
                     const li = document.createElement('li');
                     li.style.color = 'red';
@@ -217,6 +295,11 @@ async function processFile(file) {
                 }
             }
         }
+
+        // ==========================================
+        // 4. 追加：文字列抽出（Strings）の実行
+        // ==========================================
+        await runStringsExtraction(file);
 
     } catch (error) {
         errorMessage.textContent = 'エラー: ファイルの解析中に問題が発生しました。';
@@ -237,11 +320,39 @@ function formatBytes(bytes, decimals = 2) {
 // ==========================================
 // イベントリスナーの設定
 // ==========================================
+
+// 検索フィルターのリアルタイム入力イベント
+document.getElementById('stringsSearch').addEventListener('input', renderStrings);
+
+// クリップボードへのコピー機能（ローカルの file:// 環境でも確実に動く互換ロジック）
+document.getElementById('copyStringsBtn').addEventListener('click', function() {
+    const textArea = document.getElementById('stringsTextArea');
+    textArea.select();
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            alert('抽出された文字列をクリップボードにコピーしました！');
+        } else {
+            throw new Error();
+        }
+    } catch (err) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(textArea.value)
+                .then(() => alert('クリップボードにコピーしました！'))
+                .catch(() => alert('コピーに失敗しました。お使いのブラウザは対応していません。'));
+        } else {
+            alert('自動コピーがサポートされていません。Ctrl+C (Cmd+C) でコピーしてください。');
+        }
+    }
+});
+
+// ファイル選択ボタンのイベント
 document.getElementById('fileInput').addEventListener('change', function(event) {
     const file = event.target.files[0];
     processFile(file);
 });
 
+// ドラッグ＆ドロップのイベント
 const dropZone = document.getElementById('dropZone');
 dropZone.addEventListener('dragover', function(e) {
     e.preventDefault();
