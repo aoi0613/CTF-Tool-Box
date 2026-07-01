@@ -44,14 +44,13 @@ async function detectFileType(file) {
     }
 }
 
-// --- 追加：バイナリから文字列（Strings）を抽出する処理 ---
+// --- バイナリから文字列（Strings）を抽出する処理 ---
 async function runStringsExtraction(file) {
     const stringsTextArea = document.getElementById('stringsTextArea');
     const stringsCount = document.getElementById('stringsCount');
     const stringsInputGroup = document.getElementById('stringsInputGroup');
     const stringsNotice = document.getElementById('stringsNotice');
     
-    // 初期化
     stringsTextArea.value = '解析中...';
     stringsInputGroup.style.display = 'none';
     stringsNotice.textContent = '';
@@ -59,14 +58,13 @@ async function runStringsExtraction(file) {
 
     try {
         let uint8;
-        const MAX_FULL_SCAN = 4 * 1024 * 1024; // 4MB以下なら全走査
+        const MAX_FULL_SCAN = 4 * 1024 * 1024; 
 
         if (file.size <= MAX_FULL_SCAN) {
             const buffer = await file.arrayBuffer();
             uint8 = new Uint8Array(buffer);
         } else {
-            // 巨大ファイル対策：フリーズを避けるため、先頭2MBと末尾2MBのみを抽出して結合
-            const partSize = 2 * 1024 * 1024; // 2MB
+            const partSize = 2 * 1024 * 1024; 
             const headBlob = file.slice(0, partSize);
             const tailBlob = file.slice(file.size - partSize, file.size);
             
@@ -80,10 +78,9 @@ async function runStringsExtraction(file) {
             stringsNotice.textContent = `※ファイルサイズが大きいため、先頭2MBと末尾2MBのみを高速スキャンしました。`;
         }
 
-        // 文字列抽出アルゴリズム (連続する印刷可能ASCII文字 0x20〜0x7E が4文字以上)
         let start = -1;
         const minLength = 4;
-        const maxCount = 15000; // 画面表示の最大上限件数
+        const maxCount = 15000; 
         const decoder = new TextDecoder('ascii');
 
         for (let i = 0; i < uint8.length; i++) {
@@ -104,13 +101,11 @@ async function runStringsExtraction(file) {
                 }
             }
         }
-        // ファイルのジャスト末尾に文字列があった場合の処理
         if (start !== -1 && uint8.length - start >= minLength && currentStrings.length < maxCount) {
             const str = decoder.decode(uint8.subarray(start, uint8.length));
             currentStrings.push(str);
         }
 
-        // 結果の描画
         stringsInputGroup.style.display = 'block';
         renderStrings();
 
@@ -120,13 +115,11 @@ async function runStringsExtraction(file) {
     }
 }
 
-// --- 追加：Stringsの描画およびフィルタリング処理 ---
 function renderStrings() {
     const filterText = document.getElementById('stringsSearch').value.toLowerCase();
     const stringsTextArea = document.getElementById('stringsTextArea');
     const stringsCount = document.getElementById('stringsCount');
     
-    // キーワードが含まれる文字列のみを抽出 (大文字小文字を区別しない)
     const filtered = currentStrings.filter(str => str.toLowerCase().includes(filterText));
     
     if (filtered.length > 0) {
@@ -135,7 +128,6 @@ function renderStrings() {
         stringsTextArea.value = filterText ? '一致する文字列が見つかりません。' : '人間が読めるASCII文字列は見つかりませんでした。';
     }
     
-    // 「ヒット数 / 全体数」を表示
     stringsCount.textContent = `${filtered.length} / ${currentStrings.length}`;
 }
 
@@ -147,11 +139,10 @@ async function processFile(file) {
     const metadataList = document.getElementById('metadataList');
     const signatureAlert = document.getElementById('signatureAlert');
 
-    // 表示の初期化
     errorMessage.textContent = '';
     metadataList.innerHTML = '';
     signatureAlert.innerHTML = '';
-    document.getElementById('stringsSearch').value = ''; // 検索ボックスのリセット
+    document.getElementById('stringsSearch').value = ''; 
     resultBox.style.display = 'none';
 
     if (!file) {
@@ -160,11 +151,9 @@ async function processFile(file) {
     }
 
     try {
-        // 0. マジックナンバーによる真のファイル形式特定
         const detected = await detectFileType(file);
-        const fileExt = file.name.split('.').pop().toLowerCase(); // 実際のファイルの拡張子
+        const fileExt = file.name.split('.').pop().toLowerCase(); 
 
-        // 偽装チェックとアラートバッジの生成
         if (detected.matched) {
             if (detected.exts.includes(fileExt)) {
                 signatureAlert.innerHTML = `<div class="alert-badge badge-success">✓ ファイル検証: 正常（拡張子と内部シグネチャが一致しています: ${detected.name}）</div>`;
@@ -175,7 +164,6 @@ async function processFile(file) {
             signatureAlert.innerHTML = `<div class="alert-badge badge-info">ℹ シグネチャ解析: 未知のファイル形式です（拡張子 .${fileExt} として通常のメタデータ展開を試みます）</div>`;
         }
 
-        // 1. 標準のFile APIを使用して基本メタデータを抽出
         const metadata = {
             'ファイル名': file.name,
             'OS判定の形式 (MIME)': file.type || '不明',
@@ -191,7 +179,6 @@ async function processFile(file) {
             metadataList.appendChild(li);
         }
 
-        // 結果エリアを表示
         resultBox.style.display = 'block';
 
         // ==========================================
@@ -297,7 +284,88 @@ async function processFile(file) {
         }
 
         // ==========================================
-        // 4. 追加：文字列抽出（Strings）の実行
+        // 4. 追加：ZIPファイル / Office文書の解析
+        // ==========================================
+        const targetZipExts = ['zip', 'docx', 'xlsx', 'pptx', 'jar', 'apk', 'odt'];
+        if (detected.mime === 'application/zip' || targetZipExts.includes(fileExt)) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                
+                // セクション見出しの追加
+                const headerLi = document.createElement('li');
+                headerLi.innerHTML = `<h4 style="margin: 15px 0 5px 0; color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 3px;">ZIP構造解析結果</h4>`;
+                metadataList.appendChild(headerLi);
+
+                // ハイブリッドでのZIPコメント取得 (JSZip経由、取れなければ手動バイナリスキャン)
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                let zipComment = zip.comment || parseZipCommentManual(arrayBuffer);
+                
+                const commentLi = document.createElement('li');
+                if (zipComment) {
+                    commentLi.innerHTML = `<strong>ZIPアーカイブ・コメント:</strong> <br><span style="display:inline-block; margin-top:5px; color: #d63384; font-family: monospace; background: #fff0f6; padding: 4px 8px; border: 1px solid #ffccd5; border-radius: 4px; font-weight: bold; word-break: break-all;">${escapeHtml(zipComment)}</span>`;
+                } else {
+                    commentLi.innerHTML = `<strong>ZIPアーカイブ・コメント:</strong> <span style="color: #777; font-style: italic;">なし</span>`;
+                }
+                metadataList.appendChild(commentLi);
+
+                // 内部ファイル一覧
+                const fileKeys = Object.keys(zip.files);
+                const filesLi = document.createElement('li');
+                filesLi.innerHTML = `<strong>内部ファイル一覧 (${fileKeys.length} 件):</strong>`;
+                metadataList.appendChild(filesLi);
+
+                // 綺麗に一覧化するテーブルコンテナの生成
+                const tableContainer = document.createElement('div');
+                tableContainer.style.overflowX = 'auto';
+                tableContainer.style.marginTop = '8px';
+                
+                let tableHtml = `<table style="width: 100%; border-collapse: collapse; font-size: 0.85em; border: 1px solid #ddd;">
+                    <thead>
+                        <tr style="background: #f8f9fa; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">ファイルパス / 名</th>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: right; width: 90px;">解凍サイズ</th>
+                            <th style="padding: 8px; border: 1px solid #ddd; text-align: center; width: 60px;">タイプ</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                let count = 0;
+                for (const [filename, fileObj] of Object.entries(zip.files)) {
+                    count++;
+                    // 大量ファイルでのブラウザ停止対策（最大100件まで描画）
+                    if (count > 100) {
+                        tableHtml += `<tr><td colspan="3" style="padding: 8px; text-align: center; color: #777; font-style: italic; background: #fff;">...他 ${fileKeys.length - 100} 件のファイルを省略...</td></tr>`;
+                        break;
+                    }
+                    
+                    const isDir = fileObj.dir;
+                    const typeBadge = isDir ? '<span style="color: #007bff;">フォルダ</span>' : '<span style="color: #28a745;">ファイル</span>';
+                    const sizeStr = isDir ? '-' : formatBytes(fileObj._data.uncompressedSize || 0);
+                    
+                    tableHtml += `<tr style="background: ${count % 2 === 0 ? '#fdfdfd' : '#fff'};">
+                        <td style="padding: 8px; border: 1px solid #ddd; word-break: break-all; font-family: monospace;">${escapeHtml(filename)}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${sizeStr}</td>
+                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 0.9em;">${typeBadge}</td>
+                    </tr>`;
+                }
+                
+                tableHtml += `</tbody></table>`;
+                tableContainer.innerHTML = tableHtml;
+                metadataList.appendChild(tableContainer);
+
+            } catch (zipError) {
+                console.error('ZIP解析エラー:', zipError);
+                if (detected.mime === 'application/zip') {
+                    const li = document.createElement('li');
+                    li.style.color = 'red';
+                    li.textContent = 'ZIPシグネチャを検知しましたが、アーカイブの内部構造パースに失敗しました（データ破損または未対応の暗号化方式の可能性があります）。';
+                    metadataList.appendChild(li);
+                }
+            }
+        }
+
+        // ==========================================
+        // 5. 文字列抽出（Strings）の実行
         // ==========================================
         await runStringsExtraction(file);
 
@@ -305,6 +373,52 @@ async function processFile(file) {
         errorMessage.textContent = 'エラー: ファイルの解析中に問題が発生しました。';
         console.error('解析エラー:', error);
     }
+}
+
+// --- 追加：壊れたZIPや生のバイナリ埋め込みコメントを救出する手動EOCDパース関数 ---
+function parseZipCommentManual(arrayBuffer) {
+    const uint8 = new Uint8Array(arrayBuffer);
+    // EOCD(End of Central Directory)レコードの最小サイズは22バイト、コメント上限は65535バイト
+    const scanLength = Math.min(uint8.length, 65535 + 22);
+    const startOffset = uint8.length - scanLength;
+
+    // ファイル末尾から逆方向に EOCD シグネチャ [50 4b 05 06] を探索
+    for (let i = uint8.length - 22; i >= startOffset; i--) {
+        if (uint8[i] === 0x50 && uint8[i+1] === 0x4b && uint8[i+2] === 0x05 && uint8[i+3] === 0x06) {
+            // コメント長はEOCDの20バイト目から2バイト（リトルエンディアン）
+            const commentLen = uint8[i+20] | (uint8[i+21] << 8);
+            if (i + 22 + commentLen <= uint8.length) {
+                const commentBytes = uint8.subarray(i + 22, i + 22 + commentLen);
+                try {
+                    return new TextDecoder('utf-8', { fatal: true }).decode(commentBytes);
+                } catch (e) {
+                    try {
+                        // 日本の古い問題などのためにShift-JISでもフォールバック試行
+                        return new TextDecoder('shift-jis').decode(commentBytes);
+                    } catch (sjError) {
+                        // どちらもダメな場合、生のバイナリキーが隠されていると判断して16進文字列で出力
+                        let hexStr = '';
+                        for (let j = 0; j < commentBytes.length; j++) {
+                            hexStr += commentBytes[j].toString(16).padStart(2, '0') + ' ';
+                        }
+                        return `[バイナリデータ (HEX): ${hexStr.trim().toUpperCase()}]`;
+                    }
+                }
+            }
+        }
+    }
+    return null;
+}
+
+// --- 追加：HTMLインジェクション(XSS)を防止する安全なエスケープ関数 ---
+function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 // --- 補助関数: バイト数のフォーマット ---
@@ -324,7 +438,7 @@ function formatBytes(bytes, decimals = 2) {
 // 検索フィルターのリアルタイム入力イベント
 document.getElementById('stringsSearch').addEventListener('input', renderStrings);
 
-// クリップボードへのコピー機能（ローカルの file:// 環境でも確実に動く互換ロジック）
+// クリップボードへのコピー機能
 document.getElementById('copyStringsBtn').addEventListener('click', function() {
     const textArea = document.getElementById('stringsTextArea');
     textArea.select();
