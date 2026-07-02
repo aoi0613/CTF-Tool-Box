@@ -65,6 +65,10 @@
         textarea { width: 100%; font-family: monospace; font-size: 0.9em; padding: 10px; background: #fafafa; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box; }
         
         .section-header { margin: 25px 0 10px 0; border-top: 2px solid #6c757d; padding-top: 15px; color: #333; }
+        
+        /* 処理中のスピナー */
+        .loading-text { font-style: italic; color: #007bff; font-weight: bold; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     </style>
 </head>
 <body>
@@ -97,7 +101,20 @@
 
         <div id="imageAnalysisSection" style="display: none;">
             <h4 class="section-header" style="border-top-color: #9c27b0; color: #9c27b0;">ステガノグラフィ解析 (最下位ビット LSB抽出)</h4>
-            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">ピクセルのRGB値の最下位ビットに隠された文字列を抽出します。</div>
+            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">ピクセルの指定チャンネルの最下位ビットに隠された文字列を抽出します。</div>
+            
+            <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
+                <label style="font-size: 0.9em; font-weight: bold; color: #444;">抽出チャンネル:</label>
+                <select id="lsbModeSelect" style="padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9em;">
+                    <option value="rgb">RGBすべて (デフォルト)</option>
+                    <option value="r">R (Red) のみ</option>
+                    <option value="g">G (Green) のみ</option>
+                    <option value="b">B (Blue) のみ</option>
+                    <option value="a">A (Alpha) のみ</option>
+                </select>
+                <button id="lsbRecalcBtn" class="strings-btn" style="padding: 4px 10px; background-color: #9c27b0;">再抽出</button>
+            </div>
+            
             <textarea id="stegoTextArea" readonly placeholder="解析中..." style="height: 120px;"></textarea>
 
             <h4 class="section-header" style="border-top-color: #17a2b8; color: #17a2b8;">画像内の文字抽出 (OCR)</h4>
@@ -118,7 +135,7 @@
                     表示件数: <span id="stringsCount" style="font-weight: bold;">0</span> 件
                 </div>
             </div>
-            <textarea id="stringsTextArea" readonly placeholder="解析中..." style="height: 250px;"></textarea>
+            <textarea id="stringsTextArea" readonly placeholder="バックグラウンドで解析中..." style="height: 250px;"></textarea>
         </div>
     </div>
 
