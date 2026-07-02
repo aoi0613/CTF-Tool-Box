@@ -20,8 +20,9 @@ function generateAll() {
         return;
     }
 
-    // 各変換処理の実行
+    // 各変換処理の実行 (SHA-1を追加)
     runGenerator('out-md5', () => CryptoJS.MD5(inputText).toString());
+    runGenerator('out-sha1', () => CryptoJS.SHA1(inputText).toString()); // 追加箇所
     runGenerator('out-sha256', () => CryptoJS.SHA256(inputText).toString());
     runGenerator('out-hex', () => stringToHex(inputText));
     runGenerator('out-bin', () => stringToBinary(inputText));
@@ -40,7 +41,6 @@ function runGenerator(targetId, generateFn) {
 
 // 文字列を16進数(Hex)に変換する関数
 function stringToHex(str) {
-    // UTF-8としてエンコードしてからHexに変換（CTFの標準的な挙動に合わせる）
     const utf8Bytes = new TextEncoder().encode(str);
     return Array.from(utf8Bytes)
         .map(b => b.toString(16).padStart(2, '0'))
@@ -55,15 +55,16 @@ function stringToBinary(str) {
         .join(' ');
 }
 
-// 結果欄をクリアする関数
+// 結果欄をクリアする関数 (SHA-1を追加)
 function clearResults() {
     document.getElementById('out-md5').value = '';
+    document.getElementById('out-sha1').value = ''; // 追加箇所
     document.getElementById('out-sha256').value = '';
     document.getElementById('out-hex').value = '';
     document.getElementById('out-bin').value = '';
 }
 
-// クリップボードへのコピー機能（既存コードを踏襲）
+// クリップボードへのコピー機能
 function copyResult(targetId) {
     const outputText = document.getElementById(targetId).value;
     if (!outputText || outputText.startsWith("変換エラー")) {
@@ -71,13 +72,11 @@ function copyResult(targetId) {
         return;
     }
     
-    // クリップボードAPIを使用したモダンなコピー処理
     if (navigator.clipboard) {
         navigator.clipboard.writeText(outputText)
             .then(() => alert('コピーしました！'))
             .catch(() => alert('コピーに失敗しました。'));
     } else {
-        // フォールバック
         const textArea = document.getElementById(targetId);
         textArea.select();
         try {
@@ -93,7 +92,6 @@ function copyResult(targetId) {
 window.onload = function() {
     const inputTextEl = document.getElementById('inputText');
     
-    // リアルタイム変換ではなく、Enterキー（Shiftなし）で実行する仕様（既存踏襲）
     inputTextEl.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();

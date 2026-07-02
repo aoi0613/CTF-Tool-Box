@@ -18,7 +18,7 @@
         .copy-btn:hover { background: #1e7e34; }
         .error-text { color: red; font-weight: bold; margin-top: 10px; }
 
-        /* ナビゲーションのスタイル（既存踏襲） */
+        /* ナビゲーションのスタイル */
         .nav-menu { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
         .nav-menu a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
         .nav-menu a:hover { text-decoration: underline; }
@@ -46,6 +46,10 @@
         <div class="result-box">
             <h3>MD5 ハッシュ <button class="copy-btn" onclick="copyResult('out-md5')">コピー</button></h3>
             <textarea id="out-md5" readonly placeholder="結果がここに表示されます"></textarea>
+        </div>
+        <div class="result-box">
+            <h3>SHA-1 ハッシュ <button class="copy-btn" onclick="copyResult('out-sha1')">コピー</button></h3>
+            <textarea id="out-sha1" readonly></textarea>
         </div>
         <div class="result-box">
             <h3>SHA-256 ハッシュ <button class="copy-btn" onclick="copyResult('out-sha256')">コピー</button></h3>
