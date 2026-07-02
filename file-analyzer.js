@@ -431,9 +431,9 @@ function formatBytes(bytes, decimals = 2) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-// ==========================================
+// =========================================
 // イベントリスナーの設定
-// ==========================================
+// =========================================
 
 // 検索フィルターのリアルタイム入力イベント
 document.getElementById('stringsSearch').addEventListener('input', renderStrings);
