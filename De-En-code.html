@@ -3,41 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>一括暗号解読ツール</title>
+    <title>一括暗号 エンコード・デコードツール</title>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
         .input-group { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
         textarea { width: 100%; height: 80px; margin-bottom: 10px; font-family: monospace; }
-        input[type="text"], input[type="number"] { padding: 5px; margin-right: 15px; }
-        button { padding: 8px 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
-        button:hover { background: #0056b3; }
+        input[type="text"], input[type="number"] { padding: 5px; margin-right: 15px; border: 1px solid #ccc; border-radius: 4px;}
+        
+        /* ボタンのスタイル変更 */
+        .btn-decode { padding: 8px 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; margin-right: 10px; }
+        .btn-decode:hover { background: #0056b3; }
+        .btn-encode { padding: 8px 16px; cursor: pointer; background: #fd7e14; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        .btn-encode:hover { background: #e86e04; }
+        
         .result-box { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
         .result-box h3 { margin-top: 0; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
-        .result-box textarea { height: 50px; background: #fafafa; }
-        .copy-btn { padding: 4px 10px; font-size: 0.9em; background: #28a745; border: none; color: white; border-radius: 3px; cursor: pointer; }
+        .result-box textarea { height: 50px; background: #fafafa; transition: color 0.3s; }
+        
+        .copy-btn, .bf-btn { padding: 4px 10px; font-size: 0.9em; border: none; color: white; border-radius: 3px; cursor: pointer; margin-left: 5px; }
+        .copy-btn { background: #28a745; }
         .copy-btn:hover { background: #1e7e34; }
-        .error-text { color: red; font-weight: bold; }
+        .bf-btn { background: #6f42c1; }
+        .bf-btn:hover { background: #59339d; }
+        
+        .error-text { color: red; font-weight: bold; margin-top: 10px; }
         
         /* ナビゲーションのスタイル */
         .nav-menu { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
         .nav-menu a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
         .nav-menu a:hover { text-decoration: underline; }
         .nav-menu span { color: #aaa; margin-right: 15px; font-weight: bold; }
+
+        /* 全探索結果エリア */
+        #bf-results { display: none; max-height: 200px; overflow-y: auto; margin-top: 10px; background: #fff; padding: 10px; border: 1px dashed #ccc; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
     </style>
 </head>
 <body>
     <nav class="nav-menu">
-        <span>▶ 暗号解読</span>
+        <span>▶ 暗号解読・変換</span>
         <a href="file-analyzer.html">ファイル解析</a>
         <a href="hash-tool.html">ハッシュ生成・変換</a>
         <a href="terminal-tool.html">Webターミナル</a>
     </nav>
 
-    <h2>一括暗号解読ツール</h2>
+    <h2>一括暗号 エンコード・デコードツール</h2>
     
     <div class="input-group">
-        <label><b>暗号化された文字列（必須）:</b></label>
-        <textarea id="inputText" maxlength="10000" placeholder="ここに文字列を入力（Base64、URLエンコード、各種共通鍵暗号など）"></textarea>
+        <label><b>処理したい文字列（必須）:</b></label>
+        <textarea id="inputText" maxlength="10000" placeholder="ここに文字列を入力"></textarea>
         
         <div style="margin-bottom: 10px;">
             <label>シーザー暗号のずらす数:</label>
@@ -47,7 +60,10 @@
             <input type="text" id="vigenereKey" value="KEY" placeholder="例: KEY">
         </div>
         
-        <button onclick="decodeAll()">すべての方式で解読する</button>
+        <div>
+            <button class="btn-decode" onclick="processAll(false)">すべてデコード (解読)</button>
+            <button class="btn-encode" onclick="processAll(true)">すべてエンコード (暗号化)</button>
+        </div>
         <div id="globalError" class="error-text"></div>
     </div>
 
@@ -65,8 +81,15 @@
             <textarea id="out-rot13" readonly></textarea>
         </div>
         <div class="result-box">
-            <h3>シーザー暗号 <button class="copy-btn" onclick="copyResult('out-caesar')">コピー</button></h3>
+            <h3>
+                シーザー暗号 
+                <div>
+                    <button class="bf-btn" onclick="bruteForceCaesar()">全探索 (0-25)</button>
+                    <button class="copy-btn" onclick="copyResult('out-caesar')">コピー</button>
+                </div>
+            </h3>
             <textarea id="out-caesar" readonly></textarea>
+            <div id="bf-results"></div>
         </div>
         <div class="result-box">
             <h3>Vigenère暗号 <button class="copy-btn" onclick="copyResult('out-vigenere')">コピー</button></h3>
@@ -78,6 +101,6 @@
         </div>
     </div>
 
-    <script src="decode.js"></script>
+    <script src="De-En-code.js"></script>
 </body>
 </html>
