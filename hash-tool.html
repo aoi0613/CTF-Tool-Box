@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ハッシュ生成・変換ツール</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+        .input-group { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
+        textarea { width: 100%; height: 80px; margin-bottom: 10px; font-family: monospace; padding: 8px; box-sizing: border-box; }
+        button { padding: 8px 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .result-box { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
+        .result-box h3 { margin-top: 0; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
+        .result-box textarea { height: 40px; background: #fafafa; margin-bottom: 0; }
+        .copy-btn { padding: 4px 10px; font-size: 0.9em; background: #28a745; }
+        .copy-btn:hover { background: #1e7e34; }
+        .error-text { color: red; font-weight: bold; margin-top: 10px; }
+
+        /* ナビゲーションのスタイル（既存踏襲） */
+        .nav-menu { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav-menu a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
+        .nav-menu a:hover { text-decoration: underline; }
+        .nav-menu span { color: #aaa; margin-right: 15px; } 
+    </style>
+</head>
+<body>
+    <nav class="nav-menu">
+        <a href="index.html">暗号解読ツール</a>
+        <a href="file-analyzer.html">ファイル解析ツール</a>
+        <span>▶ ハッシュ生成・変換</span>
+    </nav>
+
+    <h2>ハッシュ生成・データ変換ツール</h2>
+    
+    <div class="input-group">
+        <label><b>変換したい文字列を入力してください:</b></label>
+        <textarea id="inputText" maxlength="10000" placeholder="ここに文字列を入力"></textarea>
+        
+        <button onclick="generateAll()">一括生成・変換</button>
+        <div id="globalError" class="error-text"></div>
+    </div>
+
+    <div id="results">
+        <div class="result-box">
+            <h3>MD5 ハッシュ <button class="copy-btn" onclick="copyResult('out-md5')">コピー</button></h3>
+            <textarea id="out-md5" readonly placeholder="結果がここに表示されます"></textarea>
+        </div>
+        <div class="result-box">
+            <h3>SHA-256 ハッシュ <button class="copy-btn" onclick="copyResult('out-sha256')">コピー</button></h3>
+            <textarea id="out-sha256" readonly></textarea>
+        </div>
+        <div class="result-box">
+            <h3>Hex (16進数) <button class="copy-btn" onclick="copyResult('out-hex')">コピー</button></h3>
+            <textarea id="out-hex" readonly></textarea>
+        </div>
+        <div class="result-box">
+            <h3>Binary (2進数) <button class="copy-btn" onclick="copyResult('out-bin')">コピー</button></h3>
+            <textarea id="out-bin" readonly></textarea>
+        </div>
+    </div>
+
+    <script src="hash-tool.js"></script>
+</body>
+</html>
