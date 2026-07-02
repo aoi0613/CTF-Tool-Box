@@ -205,8 +205,11 @@ function runSingleCommand(args, stdin) {
 }
 
 // ==========================================
-// ターミナルの入出力・実行管理
+// ターミナルの入出力・実行管理・履歴管理
 // ==========================================
+let commandHistory = [];
+let historyIndex = 0;
+
 function prompt() {
     term.write(`\r\n\x1b[1;32mctf-user@browser\x1b[0m:\x1b[1;34m/${pathStack.join('/')}\x1b[0m$ `);
 }
@@ -243,9 +246,42 @@ function executeCommandLine(rawLine) {
     prompt();
 }
 
+// プロンプト上の入力文字列を置き換える関数
+function replaceInput(newInput) {
+    // 現在の入力分だけバックスペースで消去
+    for (let i = 0; i < inputBuffer.length; i++) {
+        term.write('\b \b');
+    }
+    // 新しい入力を設定して描画
+    inputBuffer = newInput;
+    term.write(inputBuffer);
+}
+
 // 入力イベントのバインディング
 let inputBuffer = '';
 term.onData(data => {
+    // --- 矢印キー（コマンド履歴）の処理 ---
+    // xterm.js は矢印キーをエスケープシーケンス（\x1b[A など）として送信します
+    if (data === '\x1b[A') { // ↑キー
+        if (commandHistory.length > 0 && historyIndex > 0) {
+            historyIndex--;
+            replaceInput(commandHistory[historyIndex]);
+        }
+        return;
+    } else if (data === '\x1b[B') { // ↓キー
+        if (historyIndex < commandHistory.length - 1) {
+            historyIndex++;
+            replaceInput(commandHistory[historyIndex]);
+        } else if (historyIndex === commandHistory.length - 1) {
+            historyIndex++;
+            replaceInput(''); // 履歴の最後を超えたら入力を空にする
+        }
+        return;
+    } else if (data === '\x1b[C' || data === '\x1b[D') { 
+        // 左右の矢印キーは現状の簡易カーソル管理では無視
+        return;
+    }
+
     // ペースト対策のため、入力データを1文字ずつ処理
     for (let i = 0; i < data.length; i++) {
         const char = data[i];
@@ -253,6 +289,12 @@ term.onData(data => {
         
         if (code === 13 || code === 10) { // Enter
             term.write('\r\n');
+            // 履歴への追加
+            if (inputBuffer.trim() !== '') {
+                commandHistory.push(inputBuffer);
+            }
+            historyIndex = commandHistory.length; // 履歴のポインタを末尾にリセット
+            
             executeCommandLine(inputBuffer);
             inputBuffer = '';
         } else if (code === 127 || code === 8) { // Backspace
@@ -268,7 +310,7 @@ term.onData(data => {
 });
 
 // 初期画面
-term.write('Welcome to CTF Web Shell (Enhanced Pipeline Edition)\r\n');
+term.write('Welcome to CTF Web Shell (Enhanced Pipeline & History Edition)\r\n');
 term.write('Supported: cat, grep, strings, echo, ls, pwd, cd, mkdir, clear, nano\r\n');
 prompt();
 
