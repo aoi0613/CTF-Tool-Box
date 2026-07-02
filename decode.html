@@ -9,36 +9,39 @@
         body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
         .input-group { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
         textarea { width: 100%; height: 80px; margin-bottom: 10px; font-family: monospace; }
-        .key-area { height: 120px; } /* 秘密鍵用に少し高さを確保 */
+        .key-area { height: 120px; }
         input[type="text"], input[type="number"] { padding: 5px; margin-right: 15px; }
-        button { padding: 8px 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button { padding: 8px 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
         button:hover { background: #0056b3; }
         .result-box { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; }
-        .result-box h3 { margin-top: 0; font-size: 1.1em; display: flex; justify-content: space-between; }
+        .result-box h3 { margin-top: 0; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
         .result-box textarea { height: 50px; background: #fafafa; }
-        .copy-btn { padding: 4px 10px; font-size: 0.9em; background: #28a745; }
+        .copy-btn { padding: 4px 10px; font-size: 0.9em; background: #28a745; border: none; color: white; border-radius: 3px; cursor: pointer; }
         .copy-btn:hover { background: #1e7e34; }
         .error-text { color: red; font-weight: bold; }
-
-        /* 追加：ナビゲーションのスタイル */
+        
         .nav-menu { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
         .nav-menu a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
         .nav-menu a:hover { text-decoration: underline; }
-        .nav-menu span { color: #aaa; margin-right: 15px; } /* 現在のページ用 */
+        .nav-menu span { color: #aaa; margin-right: 15px; }
+        
+        .rsa-params-grid { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: center; margin-top: 10px; }
+        .rsa-params-grid input { width: 100%; font-family: monospace; box-sizing: border-box; }
+        .section-divider { border-top: 2px dashed #ccc; margin: 20px 0; padding-top: 15px; }
     </style>
 </head>
 <body>
     <nav class="nav-menu">
-    <span>▶ 暗号解読</span>
-    <a href="file-analyzer.html">ファイル解析ツールへ</a>
-    <a href="hash-tool.html">ハッシュ生成・変換へ</a>
-</nav>
+        <span>▶ 暗号解読</span>
+        <a href="file-analyzer.html">ファイル解析ツールへ</a>
+        <a href="hash-tool.html">ハッシュ生成・変換へ</a>
+    </nav>
 
-    <h2>一括暗号解読ツール (RSA対応)</h2>
+    <h2>一括暗号解読ツール</h2>
     
     <div class="input-group">
-        <label><b>暗号化された文字列（必須）:</b></label>
-        <textarea id="inputText" maxlength="10000" placeholder="ここに文字列を入力（RSAの場合はBase64形式を想定）"></textarea>
+        <label><b>暗号化された文字列:</b></label>
+        <textarea id="inputText" maxlength="10000" placeholder="Base64, URLエンコード, シーザー暗号などの文字列"></textarea>
         
         <div style="margin-bottom: 10px;">
             <label>シーザー暗号のずらす数:</label>
@@ -48,16 +51,31 @@
             <input type="text" id="vigenereKey" value="KEY" placeholder="例: KEY">
         </div>
 
-        <div>
-            <label><b>RSA秘密鍵（RSA復号時のみ必須）:</b></label>
-            <textarea id="rsaPrivateKey" class="key-area" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"></textarea>
+        <div style="margin-bottom: 10px;">
+            <label><b>RSA秘密鍵（PEM形式）:</b></label>
+            <textarea id="rsaPrivateKey" class="key-area" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;..."></textarea>
+        </div>
+
+        <div class="section-divider">
+            <label><b>RSAパラメータ入力 (CTF用数値解読):</b></label><br>
+            <span style="font-size: 0.85em; color: #555;">※10進数、または「0x」から始まる16進数で入力してください。復号には n, d, c が必要です。</span>
+            <div class="rsa-params-grid">
+                <label><b>n:</b></label> <input type="text" id="rsaN" placeholder="Modulus (公開鍵の一部)">
+                <label><b>e:</b></label> <input type="text" id="rsaE" placeholder="Public Exponent (復号だけなら空欄でも可)">
+                <label><b>d:</b></label> <input type="text" id="rsaD" placeholder="Private Exponent (秘密鍵)">
+                <label><b>c:</b></label> <input type="text" id="rsaC" placeholder="Ciphertext (暗号文)">
+            </div>
         </div>
         
-        <button onclick="decodeAll()">すべての方式で解読する</button>
+        <button onclick="decodeAll()" style="margin-top: 10px;">すべての方式で解読する</button>
         <div id="globalError" class="error-text"></div>
     </div>
 
     <div id="results">
+        <div class="result-box">
+            <h3>RSA パラメータ計算 (c^d mod n) <button class="copy-btn" onclick="copyResult('out-rsa-params')">コピー</button></h3>
+            <textarea id="out-rsa-params" readonly style="height: 100px;"></textarea>
+        </div>
         <div class="result-box">
             <h3>Base64 <button class="copy-btn" onclick="copyResult('out-base64')">コピー</button></h3>
             <textarea id="out-base64" readonly></textarea>
@@ -83,7 +101,7 @@
             <textarea id="out-morse" readonly></textarea>
         </div>
         <div class="result-box">
-            <h3>RSA暗号 <button class="copy-btn" onclick="copyResult('out-rsa')">コピー</button></h3>
+            <h3>RSA暗号 (PEM鍵使用) <button class="copy-btn" onclick="copyResult('out-rsa')">コピー</button></h3>
             <textarea id="out-rsa" readonly></textarea>
         </div>
     </div>
