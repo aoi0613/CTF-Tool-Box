@@ -328,10 +328,9 @@ document.getElementById('nanoTextarea').addEventListener('keydown', function(e) 
 });
 
 // ==========================================
-// 外部からのファイルアップロード対応
+// 外部からのファイルアップロード対応（ドラッグ＆ドロップ対応）
 // ==========================================
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    let file = e.target.files[0];
+function handleFileUpload(file) {
     if (!file) return;
     
     let reader = new FileReader();
@@ -346,4 +345,28 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         inputBuffer = '';
     };
     reader.readAsArrayBuffer(file);
+}
+
+// ファイル選択ボタンからのイベント
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    handleFileUpload(e.target.files[0]);
+    e.target.value = ''; // 同じファイルを再アップロードできるようにリセット
+});
+
+// ドラッグ＆ドロップのイベント
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+});
+dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFileUpload(e.dataTransfer.files[0]);
+    }
 });
