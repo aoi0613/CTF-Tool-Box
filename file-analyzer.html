@@ -7,6 +7,8 @@
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
         .input-group { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
@@ -15,13 +17,11 @@
         li { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #ccc; }
         .error { color: red; font-weight: bold; margin-top: 10px; }
 
-        /* ナビゲーションのスタイル */
         .nav-menu { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
         .nav-menu a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
         .nav-menu a:hover { text-decoration: underline; }
         .nav-menu span { color: #aaa; margin-right: 15px; } 
 
-        /* ドラッグ＆ドロップエリアのスタイル */
         .drop-zone {
             border: 2px dashed #007bff;
             border-radius: 8px;
@@ -39,7 +39,6 @@
             color: #0056b3;
         }
 
-        /* シグネチャ判定用アラートバッジ */
         .alert-badge {
             padding: 12px;
             border-radius: 6px;
@@ -57,38 +56,21 @@
             100% { border-color: #ffeeba; }
         }
 
-        /* Strings抽出エリアの横並び入力欄用スタイル */
-        .strings-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 8px;
-        }
-        .strings-search {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-        .strings-btn {
-            padding: 8px 15px;
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.9em;
-        }
+        .strings-controls { display: flex; gap: 10px; margin-bottom: 8px; }
+        .strings-search { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+        .strings-btn { padding: 8px 15px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9em; }
         .strings-btn:hover { background-color: #5a6268; }
+        
+        textarea { width: 100%; font-family: monospace; font-size: 0.9em; padding: 10px; background: #fafafa; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box; }
+        
+        .section-header { margin: 25px 0 10px 0; border-top: 2px solid #6c757d; padding-top: 15px; color: #333; }
     </style>
 </head>
 <body>
     <nav class="nav-menu">
-    <span>▶ 暗号解読</span>
-    <a href="file-analyzer.html">ファイル解析ツールへ</a>
-    <a href="hash-tool.html">ハッシュ生成・変換へ</a>
-</nav>
+        <a href="decode.html">暗号解読ツールへ</a>
+        <span>▶ ファイル解析</span>
+    </nav>
 
     <h2>ファイル解析ツール</h2>
     
@@ -108,10 +90,19 @@
         <h3>解析結果 (メタデータ)</h3>
         
         <div id="signatureAlert"></div>
-
         <ul id="metadataList"></ul>
 
-        <div id="stringsSection" style="margin-top: 25px; border-top: 2px solid #6c757d; padding-top: 15px;">
+        <div id="imageAnalysisSection" style="display: none;">
+            <h4 class="section-header" style="border-top-color: #9c27b0; color: #9c27b0;">ステガノグラフィ解析 (最下位ビット LSB抽出)</h4>
+            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">ピクセルのRGB値の最下位ビットに隠された文字列を抽出します。</div>
+            <textarea id="stegoTextArea" readonly placeholder="解析中..." style="height: 120px;"></textarea>
+
+            <h4 class="section-header" style="border-top-color: #17a2b8; color: #17a2b8;">画像内の文字抽出 (OCR)</h4>
+            <div style="font-size: 0.85em; color: #666; margin-bottom: 8px;">画像内に書き込まれたテキスト（英語・日本語）を抽出します。</div>
+            <textarea id="ocrTextArea" readonly placeholder="解析中... (数秒かかる場合があります)" style="height: 120px;"></textarea>
+        </div>
+
+        <div id="stringsSection" class="section-header">
             <h4 style="color: #6c757d; margin: 0 0 10px 0;">文字列抽出 (Strings)</h4>
             <div id="stringsNotice" style="font-size: 0.85em; color: #666; margin-bottom: 8px; font-style: italic;"></div>
             
@@ -124,7 +115,7 @@
                     表示件数: <span id="stringsCount" style="font-weight: bold;">0</span> 件
                 </div>
             </div>
-            <textarea id="stringsTextArea" readonly placeholder="解析中..." style="width: 100%; height: 250px; font-family: monospace; font-size: 0.9em; padding: 10px; background: #fafafa; border: 1px solid #ccc; border-radius: 4px; resize: vertical; box-sizing: border-box;"></textarea>
+            <textarea id="stringsTextArea" readonly placeholder="解析中..." style="height: 250px;"></textarea>
         </div>
     </div>
 
