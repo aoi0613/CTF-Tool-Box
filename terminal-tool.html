@@ -14,7 +14,7 @@
         /* ターミナルのコンテナ */
         #terminal-container {
             width: 100%;
-            height: 400px;
+            height: 450px;
             background-color: #000;
             padding: 10px;
             border-radius: 5px;
@@ -26,6 +26,25 @@
         .nav-menu a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
         .nav-menu a:hover { text-decoration: underline; }
         .nav-menu span { color: #aaa; margin-right: 15px; font-weight: bold; } 
+
+        /* Nanoエディタ（モーダル）のスタイル */
+        #nanoModal {
+            display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 90%; 
+            background: #1e1e1e; color: #ccc; z-index: 1000; border: 2px solid #555; 
+            border-radius: 5px; flex-direction: column; font-family: monospace; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        #nanoTitle { background: #ddd; color: #000; padding: 5px; text-align: center; font-weight: bold; }
+        #nanoTextarea {
+            flex: 1; background: #1e1e1e; color: #eee; border: none; outline: none; 
+            font-family: monospace; font-size: 15px; padding: 10px; resize: none;
+        }
+        #nanoFooter {
+            background: #333; color: white; padding: 10px; display: flex; 
+            justify-content: space-between; align-items: center; border-top: 1px solid #555;
+        }
+        .nano-shortcut { background: #eee; color: #000; padding: 2px 5px; margin-right: 5px; font-weight: bold; }
+        .nano-btn { padding: 6px 15px; cursor: pointer; color: white; border: none; border-radius: 3px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -40,11 +59,27 @@
     
     <div class="input-group">
         <label><b>解析対象のファイルをアップロード:</b></label><br>
+        <span style="font-size: 0.85em; color: #555;">※アップロードしたファイルは現在のディレクトリ（pwd）に保存されます。</span><br>
         <input type="file" id="fileInput" style="margin-top: 10px;">
         <div id="fileError" class="error-text"></div>
     </div>
 
     <div id="terminal-container"></div>
+
+    <div id="nanoModal">
+        <div id="nanoTitle">GNU nano</div>
+        <textarea id="nanoTextarea"></textarea>
+        <div id="nanoFooter">
+            <span>
+                <span class="nano-shortcut">^S</span> 保存 (Save) &nbsp;&nbsp;
+                <span class="nano-shortcut">^X</span> 閉じる (Exit)
+            </span>
+            <div>
+                <button class="nano-btn" style="background:#28a745; margin-right:10px;" onclick="nanoSave()">保存</button>
+                <button class="nano-btn" style="background:#dc3545;" onclick="nanoExit()">閉じる</button>
+            </div>
+        </div>
+    </div>
 
     <script src="terminal-tool.js"></script>
 </body>
