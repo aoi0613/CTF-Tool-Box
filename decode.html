@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>一括暗号解読ツール (RSA対応)</title>
-    <script src="https://unpkg.com/node-forge@1.3.1/dist/forge.min.js"></script>
+    <title>一括暗号解読ツール</title>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
         .input-group { margin-bottom: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; }
         textarea { width: 100%; height: 80px; margin-bottom: 10px; font-family: monospace; }
-        .key-area { height: 120px; }
         input[type="text"], input[type="number"] { padding: 5px; margin-right: 15px; }
         button { padding: 8px 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
         button:hover { background: #0056b3; }
@@ -24,10 +22,6 @@
         .nav-menu a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
         .nav-menu a:hover { text-decoration: underline; }
         .nav-menu span { color: #aaa; margin-right: 15px; }
-        
-        .rsa-params-grid { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: center; margin-top: 10px; }
-        .rsa-params-grid input { width: 100%; font-family: monospace; box-sizing: border-box; }
-        .section-divider { border-top: 2px dashed #ccc; margin: 20px 0; padding-top: 15px; }
     </style>
 </head>
 <body>
@@ -40,8 +34,8 @@
     <h2>一括暗号解読ツール</h2>
     
     <div class="input-group">
-        <label><b>暗号化された文字列:</b></label>
-        <textarea id="inputText" maxlength="10000" placeholder="Base64, URLエンコード, シーザー暗号などの文字列"></textarea>
+        <label><b>暗号化された文字列（必須）:</b></label>
+        <textarea id="inputText" maxlength="10000" placeholder="ここに文字列を入力（Base64、URLエンコード、各種共通鍵暗号など）"></textarea>
         
         <div style="margin-bottom: 10px;">
             <label>シーザー暗号のずらす数:</label>
@@ -50,32 +44,12 @@
             <label>Vigenère暗号の鍵（英字）:</label>
             <input type="text" id="vigenereKey" value="KEY" placeholder="例: KEY">
         </div>
-
-        <div style="margin-bottom: 10px;">
-            <label><b>RSA秘密鍵（PEM形式）:</b></label>
-            <textarea id="rsaPrivateKey" class="key-area" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;..."></textarea>
-        </div>
-
-        <div class="section-divider">
-            <label><b>RSAパラメータ入力 (CTF用数値解読):</b></label><br>
-            <span style="font-size: 0.85em; color: #555;">※10進数、または「0x」から始まる16進数で入力してください。復号には n, d, c が必要です。</span>
-            <div class="rsa-params-grid">
-                <label><b>n:</b></label> <input type="text" id="rsaN" placeholder="Modulus (公開鍵の一部)">
-                <label><b>e:</b></label> <input type="text" id="rsaE" placeholder="Public Exponent (復号だけなら空欄でも可)">
-                <label><b>d:</b></label> <input type="text" id="rsaD" placeholder="Private Exponent (秘密鍵)">
-                <label><b>c:</b></label> <input type="text" id="rsaC" placeholder="Ciphertext (暗号文)">
-            </div>
-        </div>
         
-        <button onclick="decodeAll()" style="margin-top: 10px;">すべての方式で解読する</button>
+        <button onclick="decodeAll()">すべての方式で解読する</button>
         <div id="globalError" class="error-text"></div>
     </div>
 
     <div id="results">
-        <div class="result-box">
-            <h3>RSA パラメータ計算 (c^d mod n) <button class="copy-btn" onclick="copyResult('out-rsa-params')">コピー</button></h3>
-            <textarea id="out-rsa-params" readonly style="height: 100px;"></textarea>
-        </div>
         <div class="result-box">
             <h3>Base64 <button class="copy-btn" onclick="copyResult('out-base64')">コピー</button></h3>
             <textarea id="out-base64" readonly></textarea>
@@ -99,10 +73,6 @@
         <div class="result-box">
             <h3>モールス符号 <button class="copy-btn" onclick="copyResult('out-morse')">コピー</button></h3>
             <textarea id="out-morse" readonly></textarea>
-        </div>
-        <div class="result-box">
-            <h3>RSA暗号 (PEM鍵使用) <button class="copy-btn" onclick="copyResult('out-rsa')">コピー</button></h3>
-            <textarea id="out-rsa" readonly></textarea>
         </div>
     </div>
 
