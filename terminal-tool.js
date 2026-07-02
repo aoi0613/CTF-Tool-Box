@@ -193,7 +193,14 @@ function processCommand(cmdLine) {
             } else if (curDir.children[args[1]].type === 'dir') {
                 term.write(`cat: ${args[1]}: Is a directory\r\n`);
             } else {
-                term.write(curDir.children[args[1]].text.replace(/\n/g, '\r\n') + '\r\n');
+                let fNode = curDir.children[args[1]];
+                // 💡 バイナリファイル（Null文字を含むか）を判定する安全装置
+                if (fNode.text.indexOf('\0') !== -1) {
+                    term.write(`\x1b[1;31mcat: ${args[1]}: binary file (バイナリファイルです)\x1b[0m\r\n`);
+                    term.write(`※中身の文字を確認したい場合は 'strings ${args[1]}' を使用してください。\r\n`);
+                } else {
+                    term.write(fNode.text.replace(/\n/g, '\r\n') + '\r\n');
+                }
             }
             break;
         case 'file':
